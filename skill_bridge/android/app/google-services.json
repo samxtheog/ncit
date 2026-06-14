@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "622381804025",
+    "project_id": "skillbridge-e5fab",
+    "storage_bucket": "skillbridge-e5fab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:622381804025:android:8d60e20318fab0de5ab528",
+        "android_client_info": {
+          "package_name": "com.skillbridge.skill_bridge"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "622381804025-jhmp723sc1eh0ev5mc0tsg1651hkfkmr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.skillbridge.skill_bridge",
+            "certificate_hash": "d20091ed0eaff06077a697da34b7206e7b616519"
+          }
+        },
+        {
+          "client_id": "622381804025-367c0u8v2bq3cn4r2cp1fetdkm35ed7j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCopgEJrcRLGkmwbqRds54vFpfECUNMa2M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "622381804025-367c0u8v2bq3cn4r2cp1fetdkm35ed7j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
