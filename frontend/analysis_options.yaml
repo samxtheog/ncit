@@ -1,0 +1,14 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    deprecated_member_use: ignore
+    prefer_const_constructors: ignore
+    sized_box_for_whitespace: ignore
+    curly_braces_in_flow_control_structures: ignore
+
+linter:
+  rules:
+    prefer_const_constructors: false
+    sized_box_for_whitespace: false
+    curly_braces_in_flow_control_structures: false
