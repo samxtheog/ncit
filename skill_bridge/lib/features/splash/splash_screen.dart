@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/api_constants.dart';
 import '../../core/routes/app_router.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -80,22 +83,87 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2600));
     if (!mounted) return;
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs          = await SharedPreferences.getInstance();
     final onboardingDone = prefs.getBool(AppConstants.keyOnboardingDone) ?? false;
-    final isLoggedIn     = prefs.getBool(AppConstants.keyIsLoggedIn)     ?? false;
-    final setupDone      = prefs.getBool(AppConstants.keySetupDone)      ?? false;
+    final token          = prefs.getString(AppConstants.keyAuthToken);
 
     if (!mounted) return;
 
     if (!onboardingDone) {
       context.go(AppRoutes.onboarding);
-    } else if (!isLoggedIn) {
-      context.go(AppRoutes.login);
-    } else if (!setupDone) {
-      context.go(AppRoutes.setup);
-    } else {
-      context.go(AppRoutes.home);
+      return;
     }
+
+    // No token stored → definitely not logged in
+    if (token == null || token.isEmpty) {
+      context.go(AppRoutes.login);
+      return;
+    }
+
+    // ── Verify token against MongoDB (source of truth) ──────────────────
+    try {
+      final res = await http.get(
+        Uri.parse(ApiConstants.me),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 8));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>;
+
+        // Refresh local prefs with latest DB values
+        await prefs.setBool(AppConstants.keyIsLoggedIn,  true);
+        await prefs.setBool(AppConstants.keySetupDone,   user['setupDone'] as bool? ?? false);
+        await prefs.setString(AppConstants.keyUserName,  (user['name']  as String? ?? '').split(' ').first);
+        await prefs.setString(AppConstants.keyUserEmail, user['email']  as String? ?? '');
+        await prefs.setString(AppConstants.keyUserId,    user['id']     as String? ?? '');
+        if ((user['faculty'] as String?)?.isNotEmpty == true)
+          await prefs.setString(AppConstants.keyFaculty, user['faculty'] as String);
+        if ((user['grade'] as String?)?.isNotEmpty == true)
+          await prefs.setString(AppConstants.keyGrade,   user['grade']   as String);
+        if ((user['interests'] as List?)?.isNotEmpty == true)
+          await prefs.setStringList(AppConstants.keyInterests,
+              List<String>.from(user['interests'] as List));
+        if ((user['skills'] as List?)?.isNotEmpty == true)
+          await prefs.setStringList(AppConstants.keySkills,
+              List<String>.from(user['skills'] as List));
+        if ((user['goal'] as String?)?.isNotEmpty == true)
+          await prefs.setString(AppConstants.keyGoal, user['goal'] as String);
+        await prefs.setInt(AppConstants.keyXP,        (user['xp']        as num?)?.toInt() ?? 0);
+        await prefs.setInt(AppConstants.keyQuizCount, (user['quizCount'] as num?)?.toInt() ?? 0);
+
+        final setupDone = user['setupDone'] as bool? ?? false;
+        if (!mounted) return;
+        context.go(setupDone ? AppRoutes.home : AppRoutes.setup);
+      } else {
+        // 401 / 404 — account deleted or token invalid → clear and go to login
+        await _clearSession(prefs);
+        if (!mounted) return;
+        context.go(AppRoutes.login);
+      }
+    } catch (_) {
+      // Network error — fall back to cached session so the app works offline
+      final setupDone = prefs.getBool(AppConstants.keySetupDone) ?? false;
+      if (!mounted) return;
+      context.go(setupDone ? AppRoutes.home : AppRoutes.setup);
+    }
+  }
+
+  Future<void> _clearSession(SharedPreferences prefs) async {
+    await prefs.remove(AppConstants.keyIsLoggedIn);
+    await prefs.remove(AppConstants.keyAuthToken);
+    await prefs.remove(AppConstants.keyUserId);
+    await prefs.remove(AppConstants.keyUserName);
+    await prefs.remove(AppConstants.keyUserEmail);
+    await prefs.remove(AppConstants.keySetupDone);
+    await prefs.remove(AppConstants.keyFaculty);
+    await prefs.remove(AppConstants.keyGrade);
+    await prefs.remove(AppConstants.keyInterests);
+    await prefs.remove(AppConstants.keySkills);
+    await prefs.remove(AppConstants.keyGoal);
+    await prefs.remove(AppConstants.keyXP);
+    await prefs.remove(AppConstants.keyQuizCount);
+    await prefs.remove(AppConstants.keyLastQuizDate);
   }
 
   @override
